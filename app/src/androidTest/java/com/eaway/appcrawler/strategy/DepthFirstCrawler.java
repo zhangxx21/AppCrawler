@@ -10,7 +10,10 @@ package com.eaway.appcrawler.strategy;
 import android.graphics.Rect;
 import android.support.test.InstrumentationRegistry;
 import android.support.test.uiautomator.UiDevice;
+import android.support.test.uiautomator.UiObject;
 import android.support.test.uiautomator.UiObjectNotFoundException;
+import android.support.test.uiautomator.UiScrollable;
+import android.support.test.uiautomator.UiSelector;
 import android.util.Log;
 
 import com.eaway.appcrawler.Config;
@@ -90,6 +93,8 @@ public class DepthFirstCrawler extends Crawler {
 
             if (sDepth == 0) {
                 if (sRootScreen != null) {
+                    FileLog.i(TAG_MAIN, "Root screen changed, may be due to app's coachmarks ");
+
                     Log.i(TAG, "Root screen changed, may be due to app's coachmarks");
                 }
                 sRootScreen = currentScreen;
@@ -163,7 +168,7 @@ public class DepthFirstCrawler extends Crawler {
                     }
                 } else {
                     if (UiHelper.isInTheSameScreen(currentScreen)) {
-                        FileLog.i(TAG_MAIN, "{Click} Back");
+                        FileLog.i(TAG_MAIN, "{Click} Back InTheSameScreen");
                         mDevice.pressBack();
                     }
                 }
@@ -322,7 +327,10 @@ public class DepthFirstCrawler extends Crawler {
                 sLastScreen = currentScreen;
                 sLastActionWidget = widget;
                 widget.setFinished(true);
+                Log.d("zxxlz1", text+" widget.setFinished(true)");
+
                 widget.uiObject.click();
+
             } catch (UiObjectNotFoundException e) {
                 Log.e(TAG, "UiObjectNotFoundException, failed to test a widget");
             }
@@ -336,6 +344,22 @@ public class DepthFirstCrawler extends Crawler {
         for (int i = 0; i < currentScreen.widgetList.size(); i++) {
             UiWidget widget = currentScreen.widgetList.get(i);
             if (!widget.uiObject.exists()) {
+                for (int ic = 0; ic < 10; ic++) {
+                    UiObject objS;
+                    objS = mDevice.findObject(new UiSelector().scrollable(true).instance(ic));
+                    if (objS.exists()) {
+                        try {
+                            new UiScrollable(new UiSelector().className(objS.getClassName())).scrollIntoView(widget.uiObject);
+                        } catch (UiObjectNotFoundException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                    if(widget.uiObject.exists())
+                        break;
+                }
+            }
+            if (!widget.uiObject.exists()) {
+                Log.d("zxxlz", " widget.setFinished(true)");
                 widget.setFinished(true); // Maybe UI has changed
                 continue;
             }

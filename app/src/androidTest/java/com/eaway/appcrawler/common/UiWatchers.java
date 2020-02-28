@@ -107,7 +107,7 @@ public class UiWatchers {
                 .textContains("isn't responding."));
         if (!window.exists()) {
             window = sDevice.findObject(new UiSelector().packageName("android")
-                    .textContains("沒有回應"));
+                    .textContains("没有响应"));
         }
         if (window.exists()) {
             String errorText = null;
@@ -145,7 +145,7 @@ public class UiWatchers {
                 .textContains("has stopped"));
         if (!window.exists()) {
             window = sDevice.findObject(new UiSelector().packageName("android")
-                    .textContains("已停止運作"));
+                    .textContains("已停止运行"));
         }
         if (window.exists()) {
             String errorText = null;
@@ -190,7 +190,7 @@ public class UiWatchers {
 
         UiObject buttonOK = sDevice.findObject(new UiSelector().text("OK").enabled(true));
         if (!buttonOK.exists()) {
-            buttonOK = sDevice.findObject(new UiSelector().text("確定").enabled(true));
+            buttonOK = sDevice.findObject(new UiSelector().text("确定").enabled(true));
         }
 
         try {

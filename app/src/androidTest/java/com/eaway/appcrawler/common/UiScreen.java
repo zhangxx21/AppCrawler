@@ -2,11 +2,13 @@ package com.eaway.appcrawler.common;
 
 
 import android.graphics.Color;
+import android.graphics.Rect;
 import android.support.test.InstrumentationRegistry;
 import android.support.test.uiautomator.Configurator;
 import android.support.test.uiautomator.UiDevice;
 import android.support.test.uiautomator.UiObject;
 import android.support.test.uiautomator.UiObjectNotFoundException;
+import android.support.test.uiautomator.UiScrollable;
 import android.support.test.uiautomator.UiSelector;
 import android.util.Log;
 import android.view.View;
@@ -47,9 +49,9 @@ public class UiScreen {
     public int depth = -1; // Depth in the UiTree
     public int id = -1;
     public int loop = 0; // Avoid infinite loop
-
+    private static List<UiScreen> sScannedScreenList = new ArrayList<UiScreen>();
     private boolean mFinished = false;    // True if all the child widgets have been tested
-
+    ArrayList<String> txt = new ArrayList<>();
     public UiScreen(UiScreen parent, UiWidget widget) {
         device = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation());
         UiObject root = device.findObject(new UiSelector().index(0));
@@ -66,11 +68,11 @@ public class UiScreen {
         device = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation());
         parentScreen = parent;
         parentWidget = widget;
-//        rootObject = root;
-        rootObject = device.findObject(new UiSelector().resourceId("com.android.settings:id/list"));
-        if(!rootObject.exists()){
-            rootObject = root;
-        }
+        rootObject = root;
+//        rootObject = device.findObject(new UiSelector().resourceId("com.android.settings:id/list"));
+//        if(!rootObject.exists()){
+//            rootObject = root;
+//        }
         childScreenList = new ArrayList<UiScreen>();
         widgetList = new ArrayList<UiWidget>();
         try {
@@ -97,7 +99,8 @@ public class UiScreen {
 
 
         // Build screen signature
-        parseSignature(rootObject);
+//        parseSignature(rootObject);
+        signature = drawSignature(rootObject);
 //        signature:FrameLayout;LinearLayout;FrameLayout;LinearLayout;ViewGroup;ImageButton;TextView;LinearLayout;TextView;TextView;LinearLayout;TextView;TextView;LinearLayout;TextView
         // Rollback timeout configurations
         conf.setWaitForIdleTimeout(WaitForIdleTimeout);
@@ -110,28 +113,53 @@ public class UiScreen {
 //            return;
 //        }
 
-        // Clickable
-        int i = 0;
-        UiObject clickable = null;
-        String desc = "";
-        List blacklist=Arrays.asList(Config.BLACKLIST_BUTTONS);
-        do {
-            clickable = null;
-            clickable = device.findObject(new UiSelector().clickable(true).instance(i++));
-            try {
-                desc = clickable.getContentDescription();
+        //20200224
+        if (isNewScreen(this)) {
+//            UiObject objS;
+//            objS = device.findObject(new UiSelector().scrollable(true));
+//            if (objS.exists()) {
+//                getDraw(rootObject);
+//                Log.d("zxx", txt.toString());
+//                for(String ts:txt){
+//                    UiObject clickable = device.findObject(new UiSelector().text(ts));
+//                    widgetList.add(new UiWidget(clickable));
+//                }
+//            }else {
+                // Clickable
+                int i = 0;
+                UiObject clickable = null;
+                String desc = "";
+                String rect = "";
+                List blacklist=Arrays.asList(Config.BLACKLIST_BUTTONS);
+                List blacklistrect=Arrays.asList(Config.BLACKLIST_RECT);
+                do {
+                    clickable = null;
+                    clickable = device.findObject(new UiSelector().clickable(true).instance(i++));
+                    try {
+                        desc = clickable.getContentDescription();
+                        rect=clickable.getBounds().toShortString();
 
-            } catch (UiObjectNotFoundException e) {
-                e.printStackTrace();
-            }
+                    } catch (UiObjectNotFoundException e) {
+                        e.printStackTrace();
+                    }
 
-            if(blacklist.contains(desc))
-                continue;
+                    if(blacklist.contains(desc))
+                        continue;
+                    if(blacklistrect.contains(rect))
+                        continue;
+                    if (clickable != null && clickable.exists())
+                        widgetList.add(new UiWidget(clickable));
+                } while (clickable != null && clickable.exists());
 
-            if (clickable != null && clickable.exists())
-                widgetList.add(new UiWidget(clickable));
-        } while (clickable != null && clickable.exists());
 
+//            }
+            sScannedScreenList.add(this);
+        }
+
+
+
+
+//
         // Nothing testable
         if (widgetList.size() == 0)
             mFinished = true;
@@ -148,7 +176,118 @@ public class UiScreen {
             }
         }
     }
+    public boolean isNewScreen(UiScreen currentScreen) {
+        for (UiScreen screen : sScannedScreenList) {
+            if (screen.equals(currentScreen)) {
+                return false;
+            }
+        }
+        return true;
+    }
+    private String drawClass(UiObject obj) throws UiObjectNotFoundException {
+        StringBuilder UiObj = new StringBuilder();
+        for(int i = 0 ;i<1000;i++) {
+            UiObject objC = obj.getChild(new UiSelector().instance(i));
+            if (objC.exists()) {
+                UiObj.append(objC.getClassName()).append(" ").append(objC.getText()).append("\n");
+            }else {
+                break;
+            }
+        }
+        return UiObj.toString();
+    }
+    private void getDraw(UiObject obj) {
+        String s = null;
+        try {
+            s = drawClass(obj);
+        } catch (UiObjectNotFoundException e) {
+            e.printStackTrace();
+        }
+        Log.d("zxx", s);
 
+        for(int i = 0 ;i<1000;i++){
+            UiObject objC = null;
+            try {
+                objC = obj.getChild(new UiSelector().instance(i));
+
+                if(objC.exists()){
+                    if(!objC.getText().equals("") && !txt.contains(objC.getText())) {
+                        Log.d(TAG, objC.getText());
+                        txt.add(objC.getText());
+                    }
+                }else{
+                    UiObject objS;
+                    int m = 0;
+                    do{
+                        objS = device.findObject(new UiSelector().scrollable(true).instance(m++));
+                        if(objS.exists()){
+                            new UiScrollable(new UiSelector().className(objS.getClassName())).scrollForward();
+                            String ss = drawClass(obj);
+                            Log.d("zxx", ss);
+                            if(!ss.equals(s)){
+                                Log.d("zxx", "lz");
+                                getDraw(obj);
+                            }
+                            else {
+                                break;
+                            }
+                        }
+                    } while (objS.exists()&&m<10);
+                    break;
+                }
+            } catch (UiObjectNotFoundException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+//    private void getDraw(UiObject obj) {
+//        String s = drawClass(obj);
+//        Log.d("zxx", s);
+//        UiObject clickable = null;
+//        String desc = "";
+//        List blacklist=Arrays.asList(Config.BLACKLIST_BUTTONS);
+//        for(int i = 0 ;i<1000;i++){
+//            clickable = null;
+//            clickable = device.findObject(new UiSelector().clickable(true).instance(i++));
+//
+//            if(clickable.exists()&&clickable != null ){
+//                try {
+//                    desc = clickable.getContentDescription();
+//
+//                } catch (UiObjectNotFoundException e) {
+//                    e.printStackTrace();
+//                }
+//
+//                if(blacklist.contains(desc))
+//                    continue;
+//
+//                if (clickable != null && clickable.exists())
+//                    widgetList.add(new UiWidget(clickable));
+//
+//            }else{
+//                UiObject objS;
+//                int m = 0;
+//                do{
+//                    objS = device.findObject(new UiSelector().scrollable(true).instance(m++));
+//                    if(objS.exists()){
+//                        try {
+//                            new UiScrollable(new UiSelector().className(objS.getClassName())).scrollForward();
+//                        } catch (UiObjectNotFoundException e) {
+//                            e.printStackTrace();
+//                        }
+//                        String ss = drawClass(obj);
+//                        if(!ss.equals(s)){
+//                            getDraw(obj);
+//                        }
+//                        else {
+//                            break;
+//                        }
+//                    }
+//                } while (objS.exists());
+//                break;
+//            }
+//        }
+//    }
     @Override
     public String toString() {
         // FIXME: Better to use StringBuilder
@@ -202,9 +341,34 @@ public class UiScreen {
         mFinished = true;
         return mFinished;
     }
+    private String drawSignature(UiObject obj)  {
+        StringBuilder UiObj = new StringBuilder();
+        try {
 
+            String classname = "";
+            for (int i = 0; i < 1000; i++) {
+                UiObject objC = obj.getChild(new UiSelector().instance(i));
+                if (objC.exists()) {
+                    for (String tmp : objC.getClassName().split("\\.")) {
+                        classname = tmp;
+                    }
+                    UiObj.append(classname).append(";");
+                    //                Log.d("zxx", UiObj.toString());
+                } else {
+                    break;
+                }
+            }
+        } catch (UiObjectNotFoundException e) {
+            Log.e(TAG, "uiObject does not exists during parsing");
+            System.out.println("currentScreen.signature"+"uiObject does not exists during parsing");
+
+
+        }
+
+        return UiObj.toString();
+    }
     private boolean parseSignature(UiObject uiObject) {
-        System.out.println("currentScreen.signature"+uiObject);
+//        System.out.println("currentScreen.signature"+uiObject);
         //Log.v(TAG, new Exception().getStackTrace()[0].getMethodName() + "()");
         if ((uiObject == null) || !uiObject.exists())
             return false;
@@ -220,16 +384,23 @@ public class UiScreen {
             }
             signature = signature.concat(classname + ";");
             int count=uiObject.getChildCount();
+            System.out.println("currentScreen.signature"+uiObject.getChildCount());
             // Add all children recursively
+//            if(count==0){
+//                System.out.println("currentScreen.signature"+uiObject.getClassName());
+//
+//            }
             for (int i = 0; i < count; i++) {
-                parseSignature(uiObject.getChild(new UiSelector().index(i)));
+                parseSignature(uiObject.getChild(new UiSelector().instance(i)));
 //                System.out.println("currentScreen.signature"+uiObject.getChild(new UiSelector().index(i)));
 //                System.out.println("currentScreen.signature"+uiObject.getChildCount());
 
             }
         } catch (UiObjectNotFoundException e) {
             Log.e(TAG, "uiObject does not exists during parsing");
+            System.out.println("currentScreen.signature"+"uiObject does not exists during parsing");
             return false;
+
         }
 
         return true;

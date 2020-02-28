@@ -50,6 +50,7 @@ import android.support.test.uiautomator.UiDevice;
 import android.support.test.uiautomator.UiObject;
 import android.support.test.uiautomator.UiObject2;
 import android.support.test.uiautomator.UiObjectNotFoundException;
+import android.support.test.uiautomator.UiScrollable;
 import android.support.test.uiautomator.UiSelector;
 import android.util.Log;
 
@@ -59,6 +60,7 @@ import com.eaway.appcrawler.common.UiWidget;
 import com.eaway.appcrawler.performance.PerformanceMonitor;
 import com.eaway.appcrawler.strategy.Crawler;
 import com.eaway.appcrawler.strategy.DepthFirstCrawler;
+import com.eaway.appcrawler.strategy.RandomCrawler;
 
 import org.junit.After;
 import org.junit.AfterClass;
@@ -69,6 +71,7 @@ import org.junit.runner.RunWith;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 
 /**
  * AppCrawler test using Android UiAutomator 2.0
@@ -79,7 +82,8 @@ public class TestMain {
     private static final String TAG = Config.TAG;
     private static final String TAG_MAIN = Config.TAG_MAIN;
     private static final String TAG_DEBUG = Config.TAG_DEBUG;
-
+    public static UiDevice mDevice = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation());
+    ArrayList<String> txt = new ArrayList<>();
     @BeforeClass
     public static void beforeClass() throws Exception {
         Log.v(TAG, new Exception().getStackTrace()[0].getMethodName() + "()");
@@ -140,7 +144,7 @@ public class TestMain {
     public void tearDown() throws Exception {
         Log.v(TAG, new Exception().getStackTrace()[0].getMethodName() + "()");
 
-        //saveLogcat();
+        saveLogcat();
     }
     @Test
     public void testSign(){
@@ -151,12 +155,81 @@ public class TestMain {
        
 
     }
+    @Test
+    public void myTest() throws Throwable {
+        UiObject root = mDevice.findObject(new UiSelector().index(0));
+        getDraw(root);
+        Log.d("zxx", txt.toString());
 
+    }
+
+    private String drawClass(UiObject obj) throws UiObjectNotFoundException {
+        StringBuilder UiObj = new StringBuilder();
+        String classname="";
+        for(int i = 0 ;i<1000;i++) {
+            UiObject objC = obj.getChild(new UiSelector().instance(i));
+            if (objC.exists()) {
+                for (String tmp : objC.getClassName().split("\\.")) {
+                    classname = tmp;
+                }
+                UiObj.append(classname).append(";");
+//                Log.d("zxx", UiObj.toString());
+//                Log.d("zxx", UiObj.toString());
+            }else {
+                break;
+            }
+        }
+        return UiObj.toString();
+    }
+
+    private void getDraw(UiObject obj) throws UiObjectNotFoundException{
+        String s = drawClass(obj);
+        Log.d("zxx", s);
+
+        for(int i = 0 ;i<1000;i++){
+            UiObject objC = obj.getChild(new UiSelector().instance(i));
+            if(objC.exists()){
+                if(!objC.getText().equals("") && !txt.contains(objC.getText())) {
+                    Log.d(TAG, objC.getText());
+                    txt.add(objC.getText());
+                }
+            }else{
+                UiObject objS;
+                int m = 0;
+                do{
+                    objS = mDevice.findObject(new UiSelector().scrollable(true).instance(m++));
+                    if(objS.exists()){
+                        new UiScrollable(new UiSelector().className(objS.getClassName())).scrollForward();
+                        String ss = drawClass(obj);
+                        if(!ss.equals(s)){
+                            getDraw(obj);
+                        }
+                        else {
+                            break;
+                        }
+                    }
+                } while (objS.exists());
+                break;
+            }
+        }
+    }
     @Test
     public void testMain() {
         Log.v(TAG, new Exception().getStackTrace()[0].getMethodName() + "()");
 
         Crawler crawler = new DepthFirstCrawler();
+
+        try {
+            crawler.run();
+        } catch (IllegalStateException e) {
+            Log.v(TAG, "IllegalStateException: UiAutomation not connected!");
+        }
+    }
+    @Test
+    public void testRandom() {
+        Log.v(TAG, new Exception().getStackTrace()[0].getMethodName() + "()");
+
+        Crawler crawler = new RandomCrawler();
 
         try {
             crawler.run();

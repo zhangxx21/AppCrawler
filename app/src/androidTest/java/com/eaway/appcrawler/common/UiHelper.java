@@ -199,9 +199,9 @@ public class UiHelper {
 
         String activity = device.getCurrentActivityName(); // FIXME: deprecated
         if (activity == null)
-            activity = "No Activity name";
-        if (activity.length() > 30) {
-            activity = activity.substring(0, 29);
+                activity = "No Activity name";
+            if (activity.length() > 30) {
+                activity = activity.substring(0, 29);
         }
 
         // Dump window hierarchy for debug, remove it for better performance
