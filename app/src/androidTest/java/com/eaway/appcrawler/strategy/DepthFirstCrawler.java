@@ -27,6 +27,8 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
+import static java.lang.Thread.sleep;
+
 /**
  * AppCrawler test using Android UiAutomator 2.0
  */
@@ -133,9 +135,18 @@ public class DepthFirstCrawler extends Crawler {
             if (Config.sRandomText) {
                 UiHelper.inputRandomTextToEditText();
             }
-
+            try {
+                sleep(3000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
             // Handle  next unfinished widget
             handleNextWidget(currentScreen);
+            try {
+                sleep(3000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
 
             // Check finish
             if (currentScreen.isFinished()) {
@@ -170,6 +181,19 @@ public class DepthFirstCrawler extends Crawler {
                     if (UiHelper.isInTheSameScreen(currentScreen)) {
                         FileLog.i(TAG_MAIN, "{Click} Back InTheSameScreen");
                         mDevice.pressBack();
+                        try {
+                            sleep(1000);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                        mDevice.pressBack();
+                        try {
+                            sleep(2000);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+
+
                     }
                 }
             }
@@ -327,7 +351,7 @@ public class DepthFirstCrawler extends Crawler {
                 sLastScreen = currentScreen;
                 sLastActionWidget = widget;
                 widget.setFinished(true);
-                Log.d("zxxlz1", text+" widget.setFinished(true)");
+//                FileLog.i(TAG_MAIN, text+" widget.setFinished(true)");
 
                 widget.uiObject.click();
 
@@ -344,9 +368,9 @@ public class DepthFirstCrawler extends Crawler {
         for (int i = 0; i < currentScreen.widgetList.size(); i++) {
             UiWidget widget = currentScreen.widgetList.get(i);
             if (!widget.uiObject.exists()) {
-                for (int ic = 0; ic < 10; ic++) {
+                for (int ic = 0; ic < 3; ic++) {
                     UiObject objS;
-                    objS = mDevice.findObject(new UiSelector().scrollable(true).instance(ic));
+                    objS = mDevice.findObject(new UiSelector().scrollable(true));
                     if (objS.exists()) {
                         try {
                             new UiScrollable(new UiSelector().className(objS.getClassName())).scrollIntoView(widget.uiObject);
@@ -359,7 +383,7 @@ public class DepthFirstCrawler extends Crawler {
                 }
             }
             if (!widget.uiObject.exists()) {
-                Log.d("zxxlz", " widget.setFinished(true)");
+//                FileLog.i(TAG_MAIN, " widget.setFinished(true)");
                 widget.setFinished(true); // Maybe UI has changed
                 continue;
             }

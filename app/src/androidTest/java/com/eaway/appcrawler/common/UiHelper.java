@@ -17,6 +17,9 @@ import com.eaway.appcrawler.FileLog;
 
 import java.io.File;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
 import java.util.Random;
 
 /**
@@ -113,7 +116,7 @@ public class UiHelper {
 
     public static boolean isInIgnoredActivity(String activityName) {
         for (String ignore : Config.IGNORED_ACTIVITY) {
-            if (0 == ignore.compareTo(activityName)) {
+            if (0 == ignore.compareToIgnoreCase(activityName)) {
                 return true;
             }
         }
@@ -187,6 +190,22 @@ public class UiHelper {
         if (input == null)
             return "";
         return input.replaceAll("[:\\\\/*\"?|<>']", "_");
+    }
+    public static void takeScreenPicTo(String filePath, String picName) {
+        try {
+            SimpleDateFormat dateFormat = new SimpleDateFormat("yyMMdd_HHmmss", Locale.CHINA);
+
+            UiDevice device = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation());
+            device.waitForIdle(Config.sWaitIdleTimeout);
+            File fp = new File(filePath);
+            if (!fp.exists()) device.executeShellCommand("mkdir -p " + fp);
+            Date curDate = new Date(System.currentTimeMillis());
+            String time = dateFormat.format(curDate);
+            File pic = new File(fp + "/" + picName+"_"+time+ ".png");
+            device.executeShellCommand("screencap -p " + pic);
+        }catch (IOException e){
+            e.printStackTrace();
+        }
     }
 
     // Take screenshots in Landscape and Portrait

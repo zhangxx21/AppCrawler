@@ -30,4 +30,7 @@ dependencies {
     androidTestImplementation 'com.android.support:support-annotations:23.0.1'
     androidTestImplementation 'com.android.support.test:runner:0.3'
     implementation 'com.android.support.test.uiautomator:uiautomator-v18:2.1.1'
+    implementation 'org.yaml:snakeyaml:1.23'
+    implementation 'com.github.sanjusoftware:yamlbeans:1.11'
+
 }

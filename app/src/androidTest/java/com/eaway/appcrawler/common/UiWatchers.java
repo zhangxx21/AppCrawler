@@ -95,6 +95,8 @@ public class UiWatchers {
             } catch (UiObjectNotFoundException e) {
                 Log.e(TAG, "dialog gone?", e);
             }
+            UiHelper.takeScreenPicTo(Config.sOutputDir  + "CRASH/", "ANR");
+
             onAnrDetected(errorText);
             postHandler();
             return true; // triggered
@@ -116,6 +118,8 @@ public class UiWatchers {
             } catch (UiObjectNotFoundException e) {
                 Log.e(TAG, "dialog gone?", e);
             }
+            UiHelper.takeScreenPicTo(Config.sOutputDir  + "CRASH/", "ANR");
+
             onAnrDetected(errorText);
             postHandler();
             return true; // triggered
@@ -133,6 +137,8 @@ public class UiWatchers {
             } catch (UiObjectNotFoundException e) {
                 Log.e(TAG, "dialog gone?", e);
             }
+            UiHelper.takeScreenPicTo(Config.sOutputDir  + "CRASH/", "CRASH");
+
             onCrashDetected(errorText);
             postHandler();
             return true; // triggered
@@ -155,6 +161,7 @@ public class UiWatchers {
                 Log.e(TAG, "dialog gone?", e);
             }
             UiHelper.takeScreenshots("[CRASH]");
+            UiHelper.takeScreenPicTo(Config.sOutputDir  + "CRASH/", "CRASH");
             onCrashDetected(errorText);
             postHandler();
             return true; // triggered

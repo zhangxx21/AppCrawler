@@ -37,31 +37,31 @@
 
 package com.eaway.appcrawler;
 
-import android.graphics.Rect;
+import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.Environment;
 import android.support.test.InstrumentationRegistry;
 import android.support.test.filters.SdkSuppress;
 import android.support.test.runner.AndroidJUnit4;
-import android.support.test.uiautomator.By;
 import android.support.test.uiautomator.Configurator;
-import android.support.test.uiautomator.Direction;
 import android.support.test.uiautomator.UiDevice;
 import android.support.test.uiautomator.UiObject;
-import android.support.test.uiautomator.UiObject2;
 import android.support.test.uiautomator.UiObjectNotFoundException;
 import android.support.test.uiautomator.UiScrollable;
 import android.support.test.uiautomator.UiSelector;
 import android.util.Log;
 
 import com.eaway.appcrawler.common.UiHelper;
-import com.eaway.appcrawler.common.UiScreen;
-import com.eaway.appcrawler.common.UiWidget;
 import com.eaway.appcrawler.performance.PerformanceMonitor;
 import com.eaway.appcrawler.strategy.Crawler;
 import com.eaway.appcrawler.strategy.DepthFirstCrawler;
 import com.eaway.appcrawler.strategy.RandomCrawler;
+import com.esotericsoftware.yamlbeans.YamlException;
+import com.esotericsoftware.yamlbeans.YamlReader;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -69,9 +69,14 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * AppCrawler test using Android UiAutomator 2.0
@@ -84,9 +89,11 @@ public class TestMain {
     private static final String TAG_DEBUG = Config.TAG_DEBUG;
     public static UiDevice mDevice = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation());
     ArrayList<String> txt = new ArrayList<>();
+
     @BeforeClass
     public static void beforeClass() throws Exception {
         Log.v(TAG, new Exception().getStackTrace()[0].getMethodName() + "()");
+        grantAllPerms(InstrumentationRegistry.getTargetContext().getPackageName());
 
         // Get command line parameters
         getArguments();
@@ -104,6 +111,10 @@ public class TestMain {
         // Init File log
         Config.sFileLog = Config.sOutputDir + "/" + Config.TAG + ".log";
         FileLog.i(TAG_MAIN, "Version: " + Config.VERSION);
+        FileLog.i(TAG_MAIN,"[model name]=" + mDevice.executeShellCommand("getprop ro.product.model").replace("\n",""));
+        FileLog.i(TAG_MAIN,"[serial no]=" + mDevice.executeShellCommand("getprop ro.serialno").replace("\n",""));
+        FileLog.i(TAG_MAIN,"[build info]=" + mDevice.executeShellCommand("getprop ro.build.description").replace("\n",""));
+
 
         // Init Performance log
         Config.sPerformanceLog = Config.sOutputDir + "/Performance.csv";
@@ -146,12 +157,142 @@ public class TestMain {
 
         saveLogcat();
     }
+    private String readFile(File filePath) throws IOException {
+        BufferedReader br = null;
+        try {
+            br = new BufferedReader(new FileReader(filePath));
+            StringBuilder sb = new StringBuilder();
+            String line;
+            while ((line = br.readLine()) != null) {
+                sb.append(line);
+            }
+            return sb.toString();
+        } catch (IOException e) {
+            e.printStackTrace();
+            throw e;
+        } finally {
+            if (br != null) {
+                br.close();
+            }
+        }
+    }
+    private String getAccountData(){
+        try {
+            return readFile(new File(Environment.getExternalStorageDirectory(),"black.yml"));
+        } catch (IOException e) {
+            e.printStackTrace();
+            throw new RuntimeException("Please check this path --sdcard/max.widget.black");
+        }
+    }
+    private ArrayList getAccount(){
+        try {
+
+            JSONObject data = new JSONObject(getAccountData());
+            Log.d("zxx", "123456");
+            JSONArray accountCount = data.getJSONArray("zxx");//得到账号的总数
+            Log.d("zxx", accountCount.length()+"");
+//            String[][] str = new String[accountCount.length()][];
+            ArrayList<Map<String,String>> black=new ArrayList();
+            for(int i=0;i<accountCount.length();i++){
+                Map map=new HashMap();
+                JSONObject obj = accountCount.getJSONObject(i);//获取第i个账号的数据
+                if(obj.has("bounds")){
+                    map.put("bounds",obj.getString("bounds"));
+                }
+                if(obj.has("activity")){
+                    map.put("activity",obj.getString("activity"));
+                }
+
+                if(obj.has("xpath")){
+                    map.put("xpath",obj.getString("xpath"));
+                }
+
+                black.add(map);
+            }
+        return black;
+        } catch (JSONException e) {
+            e.printStackTrace();
+            throw new IllegalArgumentException("Package file read failed, please check there tag: "
+                    );
+        }
+
+    }
+    public String getWlanAccount(String wlanName){
+        Map<String ,String> map = new HashMap<>();
+        try {
+            JSONObject data = new JSONObject(getAccountData());
+            JSONArray wlan = data.getJSONArray("wlan");
+            for(int i=0;i<wlan.length();i++){
+                JSONObject obj = wlan.getJSONObject(i);
+                Log.e("getWlanAccount: ",""+obj.getString("name")+","+obj.getString("password"));
+                map.put(obj.getString("name"),obj.getString("password"));
+                Log.e("getWlanAccount: ","Map:"+map);
+            }
+        } catch (JSONException e) {
+            e.printStackTrace();
+            throw new RuntimeException("Package file read failed, please check " +e);
+        }
+        return map.get(wlanName);
+    }
     @Test
-    public void testSign(){
-        UiScreen sLastScreen = null;
-        UiWidget sLastActionWidget = null;
-        UiScreen currentScreen = new UiScreen(sLastScreen,sLastActionWidget);
-        System.out.println("currentScreen.signature"+currentScreen.signature);
+    public void testSign() throws YamlException {
+
+
+
+        File f = new File(Environment.getExternalStorageDirectory(),"black.yml");
+        YamlReader reader = null;
+        try {
+            reader = new YamlReader(new FileReader(f));
+        } catch (FileNotFoundException e) {
+            System.out.println("zxx33333");
+            e.printStackTrace();
+        }
+        try {
+
+            ConfigYaml contact = reader.read(ConfigYaml.class);
+            System.out.println(contact.sMaxDepth);//
+        } catch (YamlException e) {
+            System.out.println("zxx22222");
+            e.printStackTrace();
+            throw e;
+        }
+////        try {
+////            https://www.jb51.net/article/176797.htm
+//            Yaml yaml = new Yaml();
+//            File f = new File(Environment.getExternalStorageDirectory(),"black.yml");
+////            Object obj=yaml.load(new FileInputStream(f));
+//            ConfigYaml  obj =(ConfigYaml) yaml.load(this.getClass().getClassLoader()
+//                    .getResourceAsStream("black.yml"));
+//
+//            System.out.println(obj.getBLACKLIST_BUTTONS());
+//            System.out.println(obj.getsMaxDepth());
+//            System.out.println(obj.getsTargetPackage());
+//            System.out.println(obj.getIGNORED_ACTIVITY());
+//
+////        } catch (Exception e1) {
+////            e1.printStackTrace();
+////        }
+
+
+
+//        ArrayList<Map<String,String>> blacklist=getAccount();
+//        for(int i = 0; i<blacklist.size() ; i++) {
+//
+//            if(blacklist.get(i).containsKey("bounds")){
+//                Log.d("zxxlz", blacklist.get(i).get("bounds"));
+//            }
+//            if(blacklist.get(i).containsKey("activity")){
+//                Log.d("zxxlz", blacklist.get(i).get("activity"));
+//            }
+//            if(blacklist.get(i).containsKey("xpath")){
+//                Log.d("zxxlz", blacklist.get(i).get("xpath"));
+//            }
+//
+//        }
+//        UiScreen sLastScreen = null;
+//        UiWidget sLastActionWidget = null;
+//        UiScreen currentScreen = new UiScreen(sLastScreen,sLastActionWidget);
+//        System.out.println("currentScreen.signature"+currentScreen.signature);
        
 
     }
@@ -162,7 +303,34 @@ public class TestMain {
         Log.d("zxx", txt.toString());
 
     }
+    public static String[] getAppPerms(String pacName){
+        PackageManager pacManager = InstrumentationRegistry.getTargetContext().getPackageManager();
 
+        try {
+            return pacManager.getPackageInfo(pacName,PackageManager.GET_PERMISSIONS).requestedPermissions;
+        } catch (PackageManager.NameNotFoundException e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    public static void grantAllPerms(String pacName){
+        PackageManager pacManager = InstrumentationRegistry.getTargetContext().getPackageManager();
+
+        try {
+            String[] permissions = getAppPerms(pacName) ;
+            if(permissions == null) return;
+            for (String p : permissions) {
+                int code = pacManager.checkPermission(p, pacName);
+                if (code != PackageManager.PERMISSION_GRANTED){
+                    mDevice.executeShellCommand("pm grant " + pacName + " " + p);
+                }
+            }
+        } catch (Throwable e) {
+            Log.d(TAG,pacName + ": grant perms fail" );
+            e.printStackTrace();
+        }
+    }
     private String drawClass(UiObject obj) throws UiObjectNotFoundException {
         StringBuilder UiObj = new StringBuilder();
         String classname="";
@@ -216,7 +384,7 @@ public class TestMain {
     @Test
     public void testMain() {
         Log.v(TAG, new Exception().getStackTrace()[0].getMethodName() + "()");
-
+        grantAllPerms("com.eaway.appcrawler");
         Crawler crawler = new DepthFirstCrawler();
 
         try {
@@ -270,6 +438,33 @@ public class TestMain {
         if (arguments.getString("random-text") != null) {
             Config.sRandomText = (arguments.getString("random-text").compareTo("true") == 0);
         }
+        File f = new File(Environment.getExternalStorageDirectory(),"config.yml");
+        YamlReader reader = null;
+        try {
+            reader = new YamlReader(new FileReader(f));
+        } catch (FileNotFoundException e) {
+            System.out.println("zxx33333");
+            e.printStackTrace();
+        }
+        try {
+
+            ConfigYaml contact = reader.read(ConfigYaml.class);
+            Config.sTargetPackage = contact.sTargetPackage;
+            Config.sMaxDepth=contact.sMaxDepth;
+            Config.BLACKLIST_BUTTONS=contact.BLACKLIST_BUTTONS_Description;
+            Config.IGNORED_ACTIVITY=contact.IGNORED_ACTIVITY;
+            System.out.println(Config.sTargetPackage );
+            System.out.println(Config.sMaxDepth);
+            System.out.println(Config.BLACKLIST_BUTTONS.toString());
+            System.out.println(Config.IGNORED_ACTIVITY.toString());
+        } catch (YamlException e) {
+            System.out.println("zxx22222");
+            e.printStackTrace();
+
+        }
+
+
+
     }
 
     public static void deleteRecursive(File fileOrDirectory) {

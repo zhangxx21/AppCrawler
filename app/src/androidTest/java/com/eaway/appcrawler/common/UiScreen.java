@@ -1,8 +1,6 @@
 package com.eaway.appcrawler.common;
 
 
-import android.graphics.Color;
-import android.graphics.Rect;
 import android.support.test.InstrumentationRegistry;
 import android.support.test.uiautomator.Configurator;
 import android.support.test.uiautomator.UiDevice;
@@ -11,13 +9,6 @@ import android.support.test.uiautomator.UiObjectNotFoundException;
 import android.support.test.uiautomator.UiScrollable;
 import android.support.test.uiautomator.UiSelector;
 import android.util.Log;
-import android.view.View;
-import android.view.ViewGroup;
-import android.widget.Button;
-import android.widget.FrameLayout;
-import android.widget.ImageButton;
-import android.widget.LinearLayout;
-import android.widget.TextView;
 
 import com.eaway.appcrawler.Config;
 
@@ -80,8 +71,10 @@ public class UiScreen {
         } catch (UiObjectNotFoundException e) {
             e.printStackTrace();
         }
+
         signature = "";
         name = device.getCurrentActivityName(); // FIXME: deprecated
+
         depth = (parentScreen == null) ? 0 : parentScreen.depth + 1;
         id = -1;
         mFinished = false;
@@ -113,47 +106,50 @@ public class UiScreen {
 //            return;
 //        }
 
-        //20200224
-        if (isNewScreen(this)) {
-//            UiObject objS;
-//            objS = device.findObject(new UiSelector().scrollable(true));
-//            if (objS.exists()) {
-//                getDraw(rootObject);
-//                Log.d("zxx", txt.toString());
-//                for(String ts:txt){
-//                    UiObject clickable = device.findObject(new UiSelector().text(ts));
-//                    widgetList.add(new UiWidget(clickable));
-//                }
-//            }else {
-                // Clickable
-                int i = 0;
-                UiObject clickable = null;
-                String desc = "";
-                String rect = "";
-                List blacklist=Arrays.asList(Config.BLACKLIST_BUTTONS);
-                List blacklistrect=Arrays.asList(Config.BLACKLIST_RECT);
-                do {
-                    clickable = null;
-                    clickable = device.findObject(new UiSelector().clickable(true).instance(i++));
-                    try {
-                        desc = clickable.getContentDescription();
-                        rect=clickable.getBounds().toShortString();
-
-                    } catch (UiObjectNotFoundException e) {
-                        e.printStackTrace();
-                    }
-
-                    if(blacklist.contains(desc))
-                        continue;
-                    if(blacklistrect.contains(rect))
-                        continue;
-                    if (clickable != null && clickable.exists())
+        //20200224isNewScreen(this)&&
+        if (pkg.compareToIgnoreCase(Config.sTargetPackage) == 0&&!UiHelper.isInIgnoredActivity(name)) {
+            if (isNewScreen(this)) {
+                UiObject objS;
+                objS = device.findObject(new UiSelector().scrollable(true));
+                if (objS.exists()) {
+                    getDraw(rootObject);
+                    Log.d("zxx", txt.toString());
+                    for (String ts : txt) {
+                        UiObject clickable = device.findObject(new UiSelector().text(ts));
                         widgetList.add(new UiWidget(clickable));
-                } while (clickable != null && clickable.exists());
+                    }
+                } else {
+                    // Clickable
+                    int i = 0;
+                    UiObject clickable = null;
+                    String desc = "";
+                    String rect = "";
+
+                    List blacklist = Arrays.asList(Config.BLACKLIST_BUTTONS);
+                    List blacklistrect = Arrays.asList(Config.BLACKLIST_RECT);
+                    do {
+                        clickable = null;
+                        clickable = device.findObject(new UiSelector().clickable(true).instance(i++));
+                        try {
+                            desc = clickable.getContentDescription();
+                            rect = clickable.getBounds().toShortString();
+
+                        } catch (UiObjectNotFoundException e) {
+                            e.printStackTrace();
+                        }
+
+                        if (blacklist.contains(desc))
+                            continue;
+                        if (blacklistrect.contains(rect))
+                            continue;
+                        if (clickable != null && clickable.exists())
+                            widgetList.add(new UiWidget(clickable));
+                    } while (clickable != null && clickable.exists());
 
 
-//            }
-            sScannedScreenList.add(this);
+                }
+                sScannedScreenList.add(this);
+            }
         }
 
 
@@ -346,7 +342,12 @@ public class UiScreen {
         try {
 
             String classname = "";
-            for (int i = 0; i < 1000; i++) {
+            UiObject objS;
+            objS = device.findObject(new UiSelector().scrollable(true));
+            if(objS.exists()) {
+                new UiScrollable(new UiSelector().className(objS.getClassName())).flingToBeginning(2);
+            }
+                for (int i = 0; i < 1000; i++) {
                 UiObject objC = obj.getChild(new UiSelector().instance(i));
                 if (objC.exists()) {
                     for (String tmp : objC.getClassName().split("\\.")) {
